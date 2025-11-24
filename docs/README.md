@@ -31,7 +31,7 @@ Key shared dataclasses live in `src/domain/models.py`, including `JobSpec`, `Car
 ### 2.1 Data Flow
 1. **Workload ingestion** – `compute_agent` accepts `{"command":"ingest_jobs","jobs":[...]}` payloads, storing `JobSpec` entries with arrival/deadline, power, SLA, and metadata.
 2. **Grid forecasting** – `grid_agent` serves `{"command":"get_grid_forecast","from":...,"to":...}` requests, returning carbon intensity and system buy/sell price series aligned to 30-minute slots.
-3. **Planning cycle** – `coordination_agent` receives `run_caco_planning`, calls both agents via `src/my_util/my_a2a.py`, and feeds the responses into `optimize_schedule`. The heuristic sorts jobs by priority, scans feasible slots under power caps and max deferral, and computes cost + carbon scores.
+3. **Planning cycle + LLM negotiation** – `coordination_agent` receives `run_caco_planning`, calls both agents via `src/my_util/my_a2a.py`, summarizes grid stress + workload urgency, and queries an optional strategy LLM (`STRATEGY_LLM_PROVIDER`/`STRATEGY_LLM_MODEL`). The LLM responds with tuned weights (`carbon_penalty_weight`, `sla_penalty_weight`, `max_power_kw`) and rationale before the heuristic optimizer runs.
 4. **Flex offer generation** – Scheduled flexible jobs are converted into `FlexOffer` instances tagged with power, duration, cluster, and carbon caps.
 5. **Catalog publication** – The Beckn server invokes `run_caco_planning` on `search`, then asynchronously POSTs `on_search` to the requesting BAP with a catalog containing each flex offer as a Beckn item.
 6. **Commitment** – When the BAP sends `init`/`confirm`, the BPP ACKs immediately and issues `on_init` / `on_confirm` callbacks referencing the chosen order item.
@@ -40,6 +40,12 @@ Key shared dataclasses live in `src/domain/models.py`, including `JobSpec`, `Car
 - `src/data_sources/carbon_intensity_client.py` / `bmrs_client.py`: async HTTPX clients with fallback generators for hackathon demos.
 - `src/optimization/engine.py`: greedy scheduler + flex offer builder that enforces power caps and penalizes lateness.
 - `src/beckn/server.py`: asynchronous Ack/on_* handling, context validation, and callback delivery using an internal `httpx.AsyncClient`.
+- `src/coordination_agent/agent.py`: orchestrates inter-agent calls and (optionally) invokes an LLM to negotiate optimization weights based on natural-language summaries of grid conditions and workload urgency.
+
+### 2.3 Strategy LLM (optional)
+- **Input**: textual summaries like “Carbon intensity peaks at 19:00 …” (Grid Agent) and “5 pending jobs, 2 critical priorities …” (Compute Agent).
+- **Output**: JSON with `carbon_penalty_weight`, `sla_penalty_weight`, `max_power_kw`, and `strategy_reasoning`.
+- **Usage**: configure `STRATEGY_LLM_PROVIDER` / `STRATEGY_LLM_MODEL` (any LiteLLM-supported provider). If unset, the coordination agent falls back to static weights from the request payload.
 
 
 ## 3. Running the Code
@@ -59,6 +65,8 @@ Copy or edit environment variables as needed:
 ```bash
 export BMRS_API_KEY="your-key"             # optional
 export COMPUTE_AGENT_JOBS_PATH="data/synthetic/workloads.json"
+export STRATEGY_LLM_PROVIDER="openai"      # optional, enables LLM negotiation
+export STRATEGY_LLM_MODEL="openai/gpt-4.1-mini"
 ```
 
 ### 3.3 CLI Commands (`python main.py ...`)

@@ -17,6 +17,7 @@ from a2a.server.request_handlers import DefaultRequestHandler
 from a2a.server.tasks import InMemoryTaskStore
 from a2a.types import AgentCard
 from a2a.utils import new_agent_text_message
+from starlette.responses import JSONResponse
 
 from src.domain import JobSpec, isoformat, parse_datetime
 
@@ -122,6 +123,12 @@ def start_compute_agent(agent_name: str = "caco_compute_agent", host: str = "loc
         http_handler=request_handler,
     )
 
-    uvicorn.run(app.build(), host=host, port=port)
+    starlette_app = app.build()
+
+    @starlette_app.route("/", methods=["GET"])
+    async def _agent_card_route(_request):
+        return JSONResponse(agent_card_dict)
+
+    uvicorn.run(starlette_app, host=host, port=port)
 
 
