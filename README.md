@@ -74,6 +74,51 @@ AI and data centers are now major energy loads. How do we ensure our digital fut
 
 ---
 
+### 📁 Code Layout Highlights
+- `src/domain/models.py` - shared dataclasses (`JobSpec`, `CarbonPoint`, `FlexOffer`, etc.)
+- `src/data_sources/` - async clients for Carbon Intensity API + Elexon BMRS.
+- `src/compute_agent/`, `src/grid_agent/`, `src/coordination_agent/` - the three A2A agents.
+- `src/optimization/engine.py` - heuristic scheduler producing `ScheduledJob` + `FlexOffer`.
+- `src/beckn/server.py` - FastAPI Beckn BPP façade exported via `python main.py beckn`.
+- `data/synthetic/workloads.json` - sample AI workloads ingested by the compute agent.
+
+### 🔌 Expected Agent Payloads
+```jsonc
+// Grid Agent
+{ "command": "get_grid_forecast", "from": "...", "to": "...", "region": "GB" }
+
+// Compute Agent
+{ "command": "ingest_jobs", "jobs": [ ... JobSpec ... ] }
+{ "command": "get_flexibility_profile", "from": "...", "to": "...", "cluster_id": "hpc-1" }
+
+// Coordination Agent
+{
+  "command": "run_caco_planning",
+  "horizon_hours": 24,
+  "region": "GB",
+  "cluster_id": "hpc-1",
+  "optimization": { "carbon_penalty_weight": 0.5, "sla_penalty_weight": 2.0, "max_power_kw": 12000 }
+}
+```
+
+Each agent responds with JSON strings; the coordination agent emits both optimized schedules and Beckn-ready flexibility offers which the Beckn server publishes as catalog items.
+
+---
+
+### 🔄 Beckn Protocol Flow (Spec-Compliant)
+- Every Beckn API (`/search`, `/init`, `/confirm`, …) **immediately ACK/NACKs** with `{"message":{"ack":{"status":"ACK"}}}` while the actual business payload is delivered asynchronously via the matching callback (`/on_search`, `/on_init`, `/on_confirm`).  
+- `context` objects follow the Beckn Core 1.0.0 schema (`domain`, `country`, `city`, `action`, `core_version`, `bap_id`, `bpp_id`, `transaction_id`, `message_id`, `timestamp`, `ttl`). The **transaction id stays constant** across the entire flow; callback message IDs are regenerated.
+- `/search` requests expect Beckn’s canonical intent shape (`message.intent.fulfillment.start.location/time`, optional `intent.tags` for power/duration filters). The BPP turns the resulting flexibility offers into proper Beckn catalog items under `message.catalog["bpp/providers"]`.
+- Example interaction:
+  1. BAP `POST /search` (intent describes time/location & tags like `power_kw`, `duration_hours`).
+  2. CACO BPP returns `ACK` immediately and, once the optimizer finishes, calls `POST {bap_uri}/on_search` with the catalog.
+  3. BAP `POST /init` with selected `order`; BPP ACKs and later invokes `{bap_uri}/on_init`.
+  4. BAP `POST /confirm`; BPP ACKs and follows up with `{bap_uri}/on_confirm` that includes the committed fulfillment.
+
+This keeps the prototype faithful to the Beckn asynchronous contract while still allowing the coordination agent to perform multi-minute optimizations before publishing the catalog.
+
+---
+
 ## 🚀 Installation
 
 ### Prerequisites
@@ -90,12 +135,12 @@ cd deg-hackathon-carbon-aware-compute
 
 ### Install Dependencies
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Create uv-managed virtual environment
+uv venv
+.\.venv\Scripts\activate  # macOS/Linux: source .venv/bin/activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install project in editable mode
+uv pip install -e .
 ```
 
 ### Environment Setup
@@ -117,22 +162,21 @@ cp config/config.example.yaml config/config.yaml
 python scripts/generate_synthetic_data.py --days 30 --output data/synthetic/
 ```
 
-### 2. Run Baseline Scheduler (No Optimization)
+### 2. Launch the full CACO simulation
 ```bash
-python src/baseline_scheduler.py --config config/config.yaml
+uv run python main.py launch --horizon-hours 24
 ```
 
-### 3. Run CACO Agent System
+### 3. Start individual agents (optional)
 ```bash
-python src/main.py --mode simulation --duration 24h
+# in separate shells
+uv run python main.py coordination
+uv run python main.py compute
+uv run python main.py grid
+uv run python main.py beckn --port 8000
 ```
 
-### 4. View Dashboard
-```bash
-streamlit run src/dashboard.py
-```
-
-Open browser to `http://localhost:8501`
+`main.py` is a Typer CLI, so `uv run python main.py --help` lists all available commands.
 
 ---
 

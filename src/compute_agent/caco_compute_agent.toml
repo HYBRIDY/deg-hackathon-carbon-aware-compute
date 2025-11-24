@@ -1,0 +1,26 @@
+name = "caco_compute_agent"
+description = "Manages AI workloads, power profiles, and flexibility reporting for CACO."
+version = "0.1.0"
+
+defaultInputModes = ["text"]
+defaultOutputModes = ["text"]
+[capabilities]
+streaming = false
+
+[[skills]]
+id = "compute_flexibility"
+name = "Compute Flexibility Manager"
+description = "Ingests workloads and returns flexibility profiles for a requested planning window."
+tags = ["compute", "workload", "flexibility"]
+examples = ["""
+{ "command": "ingest_jobs", "jobs": [] }
+""", """
+{
+  "command": "get_flexibility_profile",
+  "from": "2025-11-24T00:00:00Z",
+  "to": "2025-11-25T00:00:00Z",
+  "cluster_id": "hpc-1"
+}
+"""]
+
+

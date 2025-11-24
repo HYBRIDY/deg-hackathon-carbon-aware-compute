@@ -1,0 +1,15 @@
+[project]
+name = "literary-fanfiction-benchmark"
+version = "0.1.0"
+description = "An agentified benchmark using an LLM-as-a-Judge to evaluate the quality of AI-generated fanfiction."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "a2a-sdk[http-server]>=0.3.8",
+    "fastapi>=0.115.0",
+    "httpx>=0.27.0",
+    "dotenv>=0.9.9",
+    "litellm>=1.0.0",
+    "typer>=0.19.2",
+    "uvicorn>=0.37.0",
+]
