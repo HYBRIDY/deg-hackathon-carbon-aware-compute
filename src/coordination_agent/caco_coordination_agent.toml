@@ -1,0 +1,33 @@
+name = "caco_coordination_agent"
+description = "Coordinates compute and grid agents, runs optimization, and surfaces Beckn catalog data."
+version = "0.1.0"
+
+defaultInputModes = ["text"]
+defaultOutputModes = ["text"]
+[capabilities]
+streaming = false
+
+[[skills]]
+id = "caco_planning"
+name = "Carbon-Aware Planning"
+description = "Aggregates grid signals and workloads to produce optimized schedules and flexibility offers."
+tags = ["coordination", "optimization", "beckn"]
+examples = ["""
+{
+  "command": "run_caco_planning",
+  "horizon_hours": 24,
+  "region": "GB",
+  "cluster_id": "hpc-1",
+  "optimization": {
+    "carbon_penalty_weight": 0.5,
+    "sla_penalty_weight": 2.0,
+    "max_power_kw": 10000
+  },
+  "endpoints": {
+    "compute_agent_url": "http://localhost:9002",
+    "grid_agent_url": "http://localhost:9003"
+  }
+}
+"""]
+
+

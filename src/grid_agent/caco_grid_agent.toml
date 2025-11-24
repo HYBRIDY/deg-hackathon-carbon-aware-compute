@@ -1,0 +1,24 @@
+name = "caco_grid_agent"
+description = "Provides carbon intensity forecasts and BMRS price signals for the CACO platform."
+version = "0.1.0"
+
+defaultInputModes = ["text"]
+defaultOutputModes = ["text"]
+[capabilities]
+streaming = false
+
+[[skills]]
+id = "grid_forecast"
+name = "Grid Forecast Provider"
+description = "Returns 24-hour carbon intensity and system price forecasts for a requested region."
+tags = ["grid", "forecast", "carbon"]
+examples = ["""
+{
+  "command": "get_grid_forecast",
+  "from": "2025-11-24T00:00:00Z",
+  "to": "2025-11-25T00:00:00Z",
+  "region": "GB"
+}
+"""]
+
+

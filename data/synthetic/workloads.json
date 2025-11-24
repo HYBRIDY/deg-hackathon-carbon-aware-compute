@@ -1,0 +1,54 @@
+{
+  "jobs": [
+    {
+      "job_id": "job-001",
+      "arrival_time": "2025-11-24T06:00:00Z",
+      "power_kw": 1500,
+      "duration_hours": 4,
+      "deadline": "2025-11-24T20:00:00Z",
+      "max_deferral_hours": 12,
+      "priority": 5,
+      "sla_penalty_per_hour": 25.0,
+      "workload_type": "training",
+      "cluster_id": "hpc-1"
+    },
+    {
+      "job_id": "job-002",
+      "arrival_time": "2025-11-24T08:00:00Z",
+      "power_kw": 1000,
+      "duration_hours": 6,
+      "deadline": "2025-11-25T02:00:00Z",
+      "max_deferral_hours": 18,
+      "priority": 4,
+      "sla_penalty_per_hour": 20.0,
+      "workload_type": "batch_inference",
+      "cluster_id": "hpc-1"
+    },
+    {
+      "job_id": "job-003",
+      "arrival_time": "2025-11-24T10:00:00Z",
+      "power_kw": 800,
+      "duration_hours": 3,
+      "deadline": "2025-11-24T18:00:00Z",
+      "max_deferral_hours": 4,
+      "priority": 6,
+      "sla_penalty_per_hour": 40.0,
+      "workload_type": "training",
+      "cluster_id": "hpc-1"
+    },
+    {
+      "job_id": "job-004",
+      "arrival_time": "2025-11-24T12:00:00Z",
+      "power_kw": 1200,
+      "duration_hours": 5,
+      "deadline": "2025-11-25T06:00:00Z",
+      "max_deferral_hours": 24,
+      "priority": 3,
+      "sla_penalty_per_hour": 15.0,
+      "workload_type": "batch_inference",
+      "cluster_id": "hpc-1"
+    }
+  ]
+}
+
+
